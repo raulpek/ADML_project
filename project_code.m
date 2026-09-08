@@ -63,7 +63,58 @@ close all
 
 % open the data (1571 x 28)
 data = readtable('data.xlsx'); % obs in rows, vars in cols
+% DATA variables are not ordered, i.e. probably have to infer the variables
+% that are correlated with each other using biplot.
+
+
 
 % check for missing values
 missingValues = sum(ismissing(data)); % 28 missing values
 
+% Table to matrix and standardizing the data for the PCA
+X = table2array(data);
+X_mean = mean(X, 1);
+X_std  = std(X, 1);
+X_standardized = (X - X_mean) ./ X_std;
+% X_normalized = normalize(X); % Can also use this
+
+% Computing principal components, 
+[loadings, scores, eigen_values, tsquared, explained, mu] = pca(X_standardized, NumComponents=10);
+
+% Computing biplot of the variables
+variable_names = {
+    'Var1','Var2','Var3','Var4','Var5','Var6','Var7','Var8','Var9','Var10',...
+    'Var11','Var12','Var13','Var14','Var15','Var16','Var17','Var18','Var19',...
+    'Var20','Var21','Var22','Var23','Var24','Var25','Var26','Var27','Var28'};
+biplot(loadings(1:28,2:3), scores= scores(1:28,3:4), VarLabels=variable_names)
+% biplot(loadings(:,1:3), scores= scores(:,1:3), VarLabels=variable_names)
+
+% With pc1 and pc2 correlated sets:
+% var3, var6, var7, var8, (var4)
+% var9, var12, var15, var18
+% var5, var10
+
+% With pc2 and pc3 correlated sets:
+% var3, var6, var7, var8
+% var26, var27, var 28
+% var5, var10
+% var12, var15, var18, var19
+
+% With pc3 and pc4 correlated sets:
+% var26, var27, var 28
+
+
+
+% Plotting T^2 values.
+figure
+plot(tsquared)
+title('T^2 Chart')
+xlabel('Measurements')
+ylabel('T^2 Scores')
+
+% Plotting the explained variance
+figure
+plot(cumsum(explained) / sum(explained))
+title('Explained Variance Plot')
+xlabel('Components')
+ylabel('Explained Variance Fraction')
