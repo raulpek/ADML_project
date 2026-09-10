@@ -62,45 +62,140 @@ clearvars
 close all
 
 % open the data (1571 x 28)
-data = readtable('data.xlsx'); % obs in rows, vars in cols
+WT2 = readtable('data.xlsx', Sheet=1); % obs in rows, vars in cols
+WT3 = readtable("data.xlsx", Sheet=2);
+WT14 = readtable("data.xlsx", Sheet=3);
+WT39 = readtable("data.xlsx", Sheet=4);
 % DATA variables are not ordered, i.e. probably have to infer the variables
 % that are correlated with each other using biplot.
 
 
+% Check for missing values
+WT2_missing_values = sum(sum(ismissing(WT2)))
+WT3_missing_values = sum(sum(ismissing(WT3)))
+WT14_missing_values = sum(sum(ismissing(WT14))) % Var9 has 1 missing
+WT39_missing_values = sum(sum(ismissing(WT39)))
 
-% check for missing values
-missingValues = sum(ismissing(data)); % 28 missing values
+% Check measurement and variable sizes
+[WT2_rows, WT2_cols] = size(WT2) % 1572×28 - One extra variable compared to WT14 and WT39
+[WT3_rows, WT3_cols] = size(WT3) % 699×31 - 4 Extra variables, so needs to be dropped
+[WT14_rows, WT14_cols] = size(WT14) % 687×27 - Same amount of variables as in WT39
+[WT39_rows, WT39_cols] = size(WT39) % 1406×27 - Same amount of variables as in WT14
 
-% Table to matrix and standardizing the data for the PCA
-X = table2array(data);
-X_mean = mean(X, 1);
-X_std  = std(X, 1);
-X_standardized = (X - X_mean) ./ X_std;
-% X_normalized = normalize(X); % Can also use this
+%%
+% WT2 has  one extra variable (last one) which needs to be dropped, so that
+% the data can be compared to WT14 and WT39. WT14 has one missing value,
+% which has to be handled. WT3 has 4 extra rows, and since the variables
+% are not ordered, we cannot properly identify the variables that are
+% connected to the WT2 turbine, so it needs to be dropped. Also, WT2 and
+% WT39 have much more samples than WT14, which might be a problem. Some of
+% the values in the tables are integers, but most of the data is
+% float/double. 
+%%
+X_WT2 = table2array(WT2);
+X_WT14 = table2array(WT14);
+X_WT39 = table2array(WT39);
 
-% Computing principal components, 
-[loadings, scores, eigen_values, tsquared, explained, mu] = pca(X_standardized, NumComponents=9);
+% Replace NaN value with the mean of the previous and next measurements
+nan_index = find(isnan(X_WT14(:,9)), 1);
+X_WT14(nan_index,9) = (X_WT14(nan_index-1,9) + X_WT14(nan_index+1,9)) / 2;
 
-% Computing biplot of the variables
+% Drop last variable of WT2
+X_WT2 = X_WT2(:,1:end-1);
+
+
+% Standardize datasets
+X_WT2_scaled = (X_WT2 - mean(X_WT2, 1)) ./ std(X_WT2, 1);
+X_WT14_scaled = (X_WT14 - mean(X_WT14, 1)) ./ std(X_WT14, 1);
+X_WT39_scaled = (X_WT39 - mean(X_WT39, 1)) ./ std(X_WT39, 1);
+
+
 variable_names = {
     'Var1','Var2','Var3','Var4','Var5','Var6','Var7','Var8','Var9','Var10',...
     'Var11','Var12','Var13','Var14','Var15','Var16','Var17','Var18','Var19',...
-    'Var20','Var21','Var22','Var23','Var24','Var25','Var26','Var27','Var28'};
-biplot(loadings(1:28,2:3), scores= scores(1:28,3:4), VarLabels=variable_names)
-% biplot(loadings(:,1:3), scores= scores(:,1:3), VarLabels=variable_names)
+    'Var20','Var21','Var22','Var23','Var24','Var25','Var26','Var27'};
 
 
+% Computing principal components, 
+[loadings_WT2, scores_WT2, eigen_values_WT2, tsquared_WT2, explained_WT2, mu_WT2] = pca(X_WT2_scaled);
+[loadings_WT14, scores_WT14, eigen_values_WT14, tsquared_WT14, explained_WT14, mu_WT14] = pca(X_WT14_scaled);
+[loadings_WT39, scores_WT39, eigen_values_WT39, tsquared_WT39, explained_WT39, mu_WT39] = pca(X_WT39_scaled);
+
+
+% Computing biplot of the variables for each WT
+figure
+subplot(1,3,1)
+biplot(loadings_WT2(:,1:2), scores= scores_WT2(:,1:2), VarLabels=variable_names)
+title('WT2 PC1 & PC2 biplot')
+
+subplot(1,3,2)
+biplot(loadings_WT2(:,2:3), scores= scores_WT2(:,2:3), VarLabels=variable_names)
+title('WT2 PC2 & PC3 biplot')
+
+subplot(1,3,3)
+biplot(loadings_WT2(:,3:4), scores= scores_WT2(:,3:4), VarLabels=variable_names)
+title('WT2 PC3 & PC4 biplot')
+
+figure
+subplot(1,3,1)
+biplot(loadings_WT14(:,1:2), scores= scores_WT14(:,1:2), VarLabels=variable_names)
+title('WT14 PC1 & PC2 biplot')
+subplot(1,3,2)
+biplot(loadings_WT14(:,2:3), scores= scores_WT14(:,2:3), VarLabels=variable_names)
+title('WT14 PC2 & PC3 biplot')
+subplot(1,3,3)
+biplot(loadings_WT14(:,3:4), scores= scores_WT14(:,3:4), VarLabels=variable_names)
+title('WT14 PC3 & PC4 biplot')
+
+figure
+subplot(1,3,1)
+biplot(loadings_WT39(:,1:2), scores= scores_WT39(:,1:2), VarLabels=variable_names)
+title('WT39 PC1 & PC2 biplot')
+subplot(1,3,2)
+biplot(loadings_WT39(:,2:3), scores= scores_WT39(:,2:3), VarLabels=variable_names)
+title('WT39 PC2 & PC3 biplot')
+subplot(1,3,3)
+biplot(loadings_WT39(:,3:4), scores= scores_WT39(:,3:4), VarLabels=variable_names)
+title('WT39 PC3 & PC4 biplot')
+
+
+% 
 % Plotting T^2 values.
 figure
-plot(tsquared)
-title('T^2 Chart')
+subplot(1,3,1)
+plot(tsquared_WT2)
 xlabel('Measurements')
 ylabel('T^2 Scores')
+title('WT2 T^2 Chart')
+subplot(1,3,2)
+plot(tsquared_WT14)
+xlabel('Measurements')
+ylabel('T^2 Scores')
+title('WT14 T^2 Chart')
+subplot(1,3,3)
+plot(tsquared_WT39)
+xlabel('Measurements')
+ylabel('T^2 Scores')
+title('WT39 T^2 Chart')
+
 
 % Plotting the explained variance
 figure
-plot(cumsum(explained) / sum(explained))
-title('Explained Variance Plot')
+subplot(1,3,1)
+plot(cumsum(explained_WT2) / sum(explained_WT2))
+title('WT2 Explained Variance Plot')
+xlabel('Components')
+ylabel('Explained Variance Fraction')
+
+subplot(1,3,2)
+plot(cumsum(explained_WT14) / sum(explained_WT14))
+title('WT14 Explained Variance Plot')
+xlabel('Components')
+ylabel('Explained Variance Fraction')
+
+subplot(1,3,3)
+plot(cumsum(explained_WT39) / sum(explained_WT39))
+title('WT39 Explained Variance Plot')
 xlabel('Components')
 ylabel('Explained Variance Fraction')
 
@@ -108,16 +203,46 @@ ylabel('Explained Variance Fraction')
 figure
 for i = 1 : 9
     subplot(3, 3, i)
-    bar(loadings(:,i))
+    bar(loadings_WT2(:,i))
     xticks(1:28)
     xticklabels(variable_names)
-    title(['PC',num2str(i),' loadings'])
+    title(['WT2 PC',num2str(i),' loadings'])
 end
 
-% Correlation matrix to see which variables are correlated with each other
 figure
-heatmap(corr(X_standardized))
-xlabel('Var_i')
-ylabel('Var_i')
-title('Correlation matrix')
-colormap('hot') % Change the color map to your liking. All are awful in my opinion
+for i = 1 : 9
+    subplot(3, 3, i)
+    bar(loadings_WT14(:,i))
+    xticks(1:28)
+    xticklabels(variable_names)
+    title(['WT14 PC',num2str(i),' loadings'])
+end
+
+figure
+for i = 1 : 9
+    subplot(3, 3, i)
+    bar(loadings_WT39(:,i))
+    xticks(1:28)
+    xticklabels(variable_names)
+    title(['WT39 PC',num2str(i),' loadings'])
+end
+% 
+% % Correlation matrix to see which variables are correlated with each other
+% figure
+% heatmap(corr(X_standardized))
+% xlabel('Var_i')
+% ylabel('Var_i')
+% title('Correlation matrix')
+% colormap('hot') % Change the color map to your liking. All are awful in my opinion
+
+% 
+% figure
+% [rows, cols] = size(X_standardized);
+% 
+% for i = 1 : cols
+%     subplot(7, 4, i)
+%     plot(1:rows, X_standardized(:,i))
+%     xlabel('Time')
+%     ylabel('Signal')
+%     title(['Var',num2str(i)])
+% end
