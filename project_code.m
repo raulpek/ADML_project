@@ -93,12 +93,6 @@ values = R(sub2ind(size(R),r,c));
 r_sorted = r(sort_idx);
 c_sorted = c(sort_idx);
 values_sorted = values(sort_idx);
-    % print pairwise correlations
-%disp('Pairwise correlations');
-% for k = 1:length(values_sorted)
-%    fprintf('Var %d and Var %d: Correlation = %.2f\n', r_sorted(k), c_sorted(k), values_sorted(k));
-% end
-    % remove the one of the pairs if +1 or -1
 to_keep = true(1,28);
 for i = 1:28
     if ~to_keep(i)
@@ -135,7 +129,63 @@ for i = 1:ncols
     axis tight;
 end
 
-% link axes in order to zoom
+% link all x-axis to zoom
 linkaxes(ax, 'x');
-
 xlabel(t, 'Time Index (10s intervals)');
+
+% most "stable" seems to be variable 5
+% let see how it correlates with other variables
+corr2 = corr(data_clean);
+target_corr = corr2(5,:);
+other_cols = [1:4, 6:size(data_clean,2)];
+corr_vs_5 = target_corr(other_cols);
+% check which correlate highly with var5
+high_corr = abs(corr_vs_5) >= 0.8;
+filt_cols = other_cols(high_corr);
+filt_corrs = corr_vs_5(high_corr);
+% sort my correlation
+[~, sort_i] = sort(abs(filt_corrs));
+ranked_cols = filt_cols(sort_i);
+ranked_corrs = filt_corrs(sort_i);
+% show a table
+resu = table(ranked_cols, ranked_corrs,...
+    abs(ranked_corrs),'VariableNames',...
+    {'Var.i','Correlation','Abs corr.'});
+disp(resu); 
+% v10:0.998, v11:0.98676, v6:0.847
+% v7:0.8451, v3:0.8337,v15:0.8138, v18:0.80474
+
+% residual vector
+x_mov_avg = movmean(data_clean, window_sz,1);
+residuals = abs(data_clean - x_mov_avg);
+mean_residuals = mean(residuals,1);
+[~,worst_mean] = max(mean_residuals);
+% lets check how often we exceed 4*std
+thresh = 4*std(data_clean, 0,1);
+faults = residuals > thresh;
+count_faults = sum(faults,1); % total flagged meas.
+% sort from "cleanest" to least clean
+[sort_cnt, rank_i] = sort(count_faults, 'ascend');
+
+turb_health = table(rank_i', sort_cnt',...
+    'VariableNames',...
+    {'Var.i','No. of faults'});
+disp(turb_health); 
+% v5, v10, v15,v23 have 0 fault
+% the rest have 1
+
+% lets try clustering (hierarchical)
+corr_dist = 1 - abs(corr2);
+tree = linkage(squareform(corr_dist,'tovector'),'average');
+turb_clust = cluster(tree,'maxclust',4);
+    % mapping table
+clus_map = table((1:26)', turb_clust,...
+    'VariableNames',{'Var.i', 'Ass.cluster'});
+disp(clus_map);
+% the tree plot
+figure;
+[~,~,lead_ord] = dendrogram(tree, 0,'Orientation','left');
+title('Hierarchical tree of the variables');
+xlabel('Corr.dist (1-|r|)');
+ylabel('Var.i');
+grid on;
