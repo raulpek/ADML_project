@@ -92,9 +92,13 @@ WT39_missing_values = sum(sum(ismissing(WT39)))
 % the values in the tables are integers, but most of the data is
 % float/double. 
 %%
+% Casting tables to arrays and removing index rows
 X_WT2 = table2array(WT2);
+X_WT2(1,:) = [];
 X_WT14 = table2array(WT14);
+X_WT14(1,:) = []; 
 X_WT39 = table2array(WT39);
+X_WT39(1,:) = [];
 
 % Replace NaN value with the mean of the previous and next measurements
 nan_index = find(isnan(X_WT14(:,9)), 1);
@@ -103,6 +107,16 @@ X_WT14(nan_index,9) = (X_WT14(nan_index-1,9) + X_WT14(nan_index+1,9)) / 2;
 % Drop last variable of WT2
 X_WT2 = X_WT2(:,1:end-1);
 
+% Checking zero variance variables
+WT2_zerovar = var(X_WT2) < 1e-3;
+WT14_zerovar = var(X_WT14) < 1e-3;
+WT39_zerovar = var(X_WT39) < 1e-3;
+
+% Dropping zero variance variables
+X_WT2(:,WT2_zerovar) = [];
+X_WT14(:,WT2_zerovar) = [];
+X_WT39(:,WT2_zerovar) = [];
+
 
 % Standardize datasets
 X_WT2_scaled = (X_WT2 - mean(X_WT2, 1)) ./ std(X_WT2, 1);
@@ -110,6 +124,8 @@ X_WT14_scaled = (X_WT14 - mean(X_WT14, 1)) ./ std(X_WT14, 1);
 X_WT39_scaled = (X_WT39 - mean(X_WT39, 1)) ./ std(X_WT39, 1);
 
 
+
+%%
 variable_names = {
     'Var1','Var2','Var3','Var4','Var5','Var6','Var7','Var8','Var9','Var10',...
     'Var11','Var12','Var13','Var14','Var15','Var16','Var17','Var18','Var19',...
