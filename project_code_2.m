@@ -145,25 +145,38 @@ for plotting for it to show anything. (teacher feedback)
 %}
 k = 6;
 P_k = loadings_WT2(:,1:k);
-scores_WT14 = X_WT14_scaled * P_k; % project to wt2
-scores_WT39 = X_WT39_scaled * P_k; % project to wt2
+scores_WT2 =  X_WT2_scaled * P_k(:,1:2);
+scores_WT14 = X_WT14_scaled * P_k(:,1:2); % project to wt2
+scores_WT39 = X_WT39_scaled * P_k(:,1:2); % project to wt2
 % normalize scores
-scores_WT2_norm = scores_WT2(:,1:2) ./ sqrt(eigen_values_WT2(1:2)');
-scores_WT14_norm = scores_WT14(:,1:2) ./ sqrt(eigen_values_WT14(1:2)');
-scores_WT39_norm = scores_WT39(:,1:2) ./ sqrt(eigen_values_WT39(1:2)');
+std_WT2 = std(scores_WT2);
+scores_WT2_norm = scores_WT2(:,1:2) ./ std_WT2;
+scores_WT14_norm = scores_WT14(:,1:2) ./ std_WT2;
+scores_WT39_norm = scores_WT39(:,1:2) ./ std_WT2;
+all_scores = [scores_WT2_norm;scores_WT14_norm;scores_WT39_norm];
+limits = 1;
+titles = {"WT2", "WT14", "WT39"};
+set_scores = {scores_WT2_norm,scores_WT14_norm,scores_WT39_norm};
+arr_scale = limits*0.8;
 % plot the scaled biplots
 figure
-subplot(1,3,1)
-biplot(P_k(:,1:2), 'Scores', scores_WT2_norm, 'VarLabels',variable_names(1:24))
-title('WT2 (baseline) biplot')
-
-subplot(1,3,2)
-biplot(P_k(:,1:2), scores= scores_WT14_norm, VarLabels=variable_names(1:24))
-title('WT14 biplot')
-
-subplot(1,3,3)
-biplot(P_k(:,1:2), scores= scores_WT39_norm, VarLabels=variable_names(1:24))
-title('WT39 biplot')
+for i = 1:3
+    subplot(1,3,i)
+    hold on;
+    scatter(set_scores{i}(:,1), set_scores{i}(:,2),8,'filled');
+    for j = 1:size(P_k,1)
+        quiver(0,0,P_k(j,1)*arr_scale, P_k(j,2)*arr_scale,0, 'r');
+        text(P_k(j,1)*arr_scale, P_k(j,2)*arr_scale,...
+            variable_names{j}, 'Fontsize',5);
+    end
+    xlim([-limits, limits]);
+    ylim([-limits, limits]);
+    xlabel("PC1");
+    ylabel("PC2");
+    title(titles{i});
+    grid on;
+    hold off;
+end
 
 %% Computing biplot of the variables for each WT
 figure
