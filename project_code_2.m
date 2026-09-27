@@ -131,12 +131,39 @@ variable_names = {
     'Var11','Var12','Var13','Var14','Var15','Var16','Var17','Var18','Var19',...
     'Var20','Var21','Var22','Var23','Var24','Var25','Var26','Var27'};
 
+% plot the normalized variables
+figure('Color','w');
+title('Overlay of 28 variables');
+for i = 1:size(X_WT2_scaled,2)
+    subplot(7,4,i);
+    plot(X_WT2_scaled(:,i),'LineWidth',0.8);
+    title(sprintf('Var %d',i),'FontSize',8);
+    grid on;
+    axis tight;
+end
+grid on;
+axis tight;
+
+
+%remov_cols = [12,13,15];
+%X_WT2_scaled(:,remov_cols) = [];
+% % Correlation matrix to see which variables are correlated with each other
+figure
+heatmap(corr(X_WT2))
+xlabel('Var_i')
+ylabel('Var_i')
+title('Correlation matrix')
+colormap('parula') % Change the color map to your liking. All are awful in my opinion
+
+%%
 
 % Computing principal components, 
 [loadings_WT2, scores_WT2, eigen_values_WT2, tsquared_WT2, explained_WT2, mu_WT2] = pca(X_WT2_scaled);
 [loadings_WT14, scores_WT14, eigen_values_WT14, tsquared_WT14, explained_WT14, mu_WT14] = pca(X_WT14_scaled);
 [loadings_WT39, scores_WT39, eigen_values_WT39, tsquared_WT39, explained_WT39, mu_WT39] = pca(X_WT39_scaled);
 
+
+%
 
 %{
 The biplot is not normalized with respect to the scores.
@@ -145,6 +172,8 @@ for plotting for it to show anything. (teacher feedback)
 %}
 k = 6;
 P_k = loadings_WT2(:,1:k);
+P_WT14 = loadings_WT14(:,1:k);
+P_WT39 = loadings_WT39(:,1:k);
 scores_WT2 =  X_WT2_scaled * P_k(:,1:2);
 scores_WT14 = X_WT14_scaled * P_k(:,1:2); % project to wt2
 scores_WT39 = X_WT39_scaled * P_k(:,1:2); % project to wt2
@@ -154,11 +183,13 @@ scores_WT2_norm = scores_WT2(:,1:2) ./ std_WT2;
 scores_WT14_norm = scores_WT14(:,1:2) ./ std_WT2;
 scores_WT39_norm = scores_WT39(:,1:2) ./ std_WT2;
 all_scores = [scores_WT2_norm;scores_WT14_norm;scores_WT39_norm];
-limits = 1;
+limits = 3;
 titles = {"WT2", "WT14", "WT39"};
 set_scores = {scores_WT2_norm,scores_WT14_norm,scores_WT39_norm};
-arr_scale = limits*0.8;
+arr_scale = limits*1.05;
 % plot the scaled biplots
+load_magni = sqrt(P_k(:,1).^2 + P_k(:,2).^2);
+load_thres = 0.15;
 figure
 for i = 1:3
     subplot(1,3,i)
@@ -166,8 +197,10 @@ for i = 1:3
     scatter(set_scores{i}(:,1), set_scores{i}(:,2),8,'filled');
     for j = 1:size(P_k,1)
         quiver(0,0,P_k(j,1)*arr_scale, P_k(j,2)*arr_scale,0, 'r');
-        text(P_k(j,1)*arr_scale, P_k(j,2)*arr_scale,...
-            variable_names{j}, 'Fontsize',5);
+        if load_magni(j) > load_thres
+            text(P_k(j,1)*arr_scale, P_k(j,2)*arr_scale,...
+                variable_names{j}, 'Fontsize',12, 'Margin',4);
+        end
     end
     xlim([-limits, limits]);
     ylim([-limits, limits]);
@@ -178,43 +211,81 @@ for i = 1:3
     hold off;
 end
 
-%% Computing biplot of the variables for each WT
+% most important fault variables: loadings vs healthy
+C14 = P_k'*P_WT14;
+C39 = P_k'*P_WT39;
+[~, matchIdx_14] = max(abs(C14),[],1);
+P_WT14_align = zeros(size(P_WT14));
+[~, matchIdx_39] = max(abs(C39),[],1);
+P_WT39_align = zeros(size(P_WT39));
+for j = 1:k
+    s1 = sign(C14(matchIdx_14(j),j));
+    s2 = sign(C39(matchIdx_39(j),j));
+    P_WT14_align(:, matchIdx_14(j)) = s1*P_WT14(:,j);
+    P_WT39_align(:,matchIdx_39(j)) = s2 *P_WT39(:,j);
+
+end
+diff_WT14 = sqrt(sum((P_k - P_WT14_align).^2,2));
+diff_WT39 = sqrt(sum((P_k - P_WT39_align).^2,2));
+
+[diff_WT4_ordered, idx14] = sort(diff_WT14,'descend');
+[diff_WT39_ordered, idx39] = sort(diff_WT39,'descend');
+disp("Most different variables to WT14");
+disp(variable_names(idx14(1:5)));
+disp("Most different variables to WT39");
+disp(variable_names(idx39(1:5)));
+isequal(X_WT14_scaled, X_WT39_scaled)
+isequal(diff_WT14, diff_WT39)
+
+% 20 first faulty observations
+fault_WT14_20 = X_WT14_scaled(1:20,:);
+fault_WT39_20 = X_WT39_scaled(1:20,:);
+% calibrate
+[loadings_F_WT14, scoresFault14, ~, ~, explainedFault14, muFault14] = pca(fault_WT14_20);
+[loadings_F_WT39, scoresFault39, ~, ~, explainedFault39, muFault39] = pca(fault_WT39_20);
+k_val = 6;
+P_6 = loadings_WT2(:,1:k);
+P_WT14_20 = loadings_F_WT14(:,1:k);
+P_WT39_20 = loadings_F_WT39(:,1:k);
+%% 
+%{
+% Computing biplot of the variables for each WT
 figure
 subplot(1,3,1)
-biplot(loadings_WT2(:,1:2), scores= scores_WT2(:,1:2), VarLabels=variable_names)
+biplot(loadings_WT2(:,1:2), scores= scores_WT2(:,1:2), VarLabels=variable_names(1:24))
 title('WT2 PC1 & PC2 biplot')
 
 subplot(1,3,2)
-biplot(loadings_WT2(:,2:3), scores= scores_WT2(:,2:3), VarLabels=variable_names)
+biplot(loadings_WT2(:,2:3), scores= scores_WT2(:,2:3), VarLabels=variable_names(1:24))
 title('WT2 PC2 & PC3 biplot')
 
 subplot(1,3,3)
-biplot(loadings_WT2(:,3:4), scores= scores_WT2(:,3:4), VarLabels=variable_names)
+biplot(loadings_WT2(:,3:4), scores= scores_WT2(:,3:4), VarLabels=variable_names(1:24))
 title('WT2 PC3 & PC4 biplot')
 
 figure
 subplot(1,3,1)
-biplot(loadings_WT14(:,1:2), scores= scores_WT14(:,1:2), VarLabels=variable_names)
+biplot(loadings_WT14(:,1:2), scores= scores_WT14(:,1:2), VarLabels=variable_names(1:24))
 title('WT14 PC1 & PC2 biplot')
 subplot(1,3,2)
-biplot(loadings_WT14(:,2:3), scores= scores_WT14(:,2:3), VarLabels=variable_names)
+biplot(loadings_WT14(:,2:3), scores= scores_WT14(:,2:3), VarLabels=variable_names(1:24))
 title('WT14 PC2 & PC3 biplot')
 subplot(1,3,3)
-biplot(loadings_WT14(:,3:4), scores= scores_WT14(:,3:4), VarLabels=variable_names)
+biplot(loadings_WT14(:,3:4), scores= scores_WT14(:,3:4), VarLabels=variable_names(1:24))
 title('WT14 PC3 & PC4 biplot')
 
 figure
 subplot(1,3,1)
-biplot(loadings_WT39(:,1:2), scores= scores_WT39(:,1:2), VarLabels=variable_names)
+biplot(loadings_WT39(:,1:2), scores= scores_WT39(:,1:2), VarLabels=variable_names(1:24))
 title('WT39 PC1 & PC2 biplot')
 subplot(1,3,2)
-biplot(loadings_WT39(:,2:3), scores= scores_WT39(:,2:3), VarLabels=variable_names)
+biplot(loadings_WT39(:,2:3), scores= scores_WT39(:,2:3), VarLabels=variable_names(1:24))
 title('WT39 PC2 & PC3 biplot')
 subplot(1,3,3)
-biplot(loadings_WT39(:,3:4), scores= scores_WT39(:,3:4), VarLabels=variable_names)
+biplot(loadings_WT39(:,3:4), scores= scores_WT39(:,3:4), VarLabels=variable_names(1:24))
 title('WT39 PC3 & PC4 biplot')
 
-
+%}
 % 
 % Plotting T^2 values.
 figure
