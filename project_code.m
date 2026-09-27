@@ -129,7 +129,7 @@ X_WT39_scaled = (X_WT39 - mean(X_WT39, 1)) ./ std(X_WT39, 1);
 variable_names = {
     'Var1','Var2','Var3','Var4','Var5','Var6','Var7','Var8','Var9','Var10',...
     'Var11','Var12','Var13','Var14','Var15','Var16','Var17','Var18','Var19',...
-    'Var20','Var21','Var22','Var23','Var24','Var25','Var26','Var27'};
+    'Var20','Var21','Var22','Var23','Var24'};
 
 
 % Computing principal components, 
