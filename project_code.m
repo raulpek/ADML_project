@@ -220,7 +220,7 @@ figure
 for i = 1 : 9
     subplot(3, 3, i)
     bar(loadings_WT2(:,i))
-    xticks(1:28)
+    xticks(1:length(variable_names))
     xticklabels(variable_names)
     title(['WT2 PC',num2str(i),' loadings'])
 end
@@ -229,7 +229,7 @@ figure
 for i = 1 : 9
     subplot(3, 3, i)
     bar(loadings_WT14(:,i))
-    xticks(1:28)
+    xticks(1:length(variable_names))
     xticklabels(variable_names)
     title(['WT14 PC',num2str(i),' loadings'])
 end
@@ -238,10 +238,34 @@ figure
 for i = 1 : 9
     subplot(3, 3, i)
     bar(loadings_WT39(:,i))
-    xticks(1:28)
+    xticks(1:length(variable_names))
     xticklabels(variable_names)
     title(['WT39 PC',num2str(i),' loadings'])
 end
+
+
+% Comparison of each turbine PC1 Loadings
+figure
+subplot(1, 3, 1)
+bar(loadings_WT2(:,1))
+xticks(1:length(variable_names))
+xticklabels(variable_names)
+title('WT2 PC1 Loadings')
+
+subplot(1, 3, 2)
+bar(loadings_WT14(:,1))
+xticks(1:length(variable_names))
+xticklabels(variable_names)
+title('WT14 PC1 Loadings')
+
+subplot(1, 3, 3)
+bar(loadings_WT39(:,1))
+xticks(1:length(variable_names))
+xticklabels(variable_names)
+title('WT39 PC1 Loadings')
+
+
+
 % 
 % % Correlation matrix to see which variables are correlated with each other
 % figure
