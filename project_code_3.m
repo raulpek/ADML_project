@@ -238,3 +238,13 @@ test_RMSE_WT14 = sqrt(mean((res_WT14).^2,1));
 test_RMSE_WT39 = sqrt(mean((res_WT39).^2,1));
 % for Wt14: 1.05 and 1.14
 % for WT39 1.02 and 1.08
+
+%{
+We get good results of the PLS model
+for the healthy data.
+On the faulty turbines, the performance
+degrades especially for the second sensor
+where we see rise from 0.42 to 1.14 in WT4.
+In short, we are not able to maintain the
+regression performance for a faulty turbine.
+%}
