@@ -71,18 +71,18 @@ WT39 = readtable("data.xlsx", Sheet=4);
 
 
 % Check for missing values
-WT2_missing_values = sum(sum(ismissing(WT2)))
-WT3_missing_values = sum(sum(ismissing(WT3)))
-WT14_missing_values = sum(sum(ismissing(WT14))) % Var9 has 1 missing
-WT39_missing_values = sum(sum(ismissing(WT39)))
+WT2_missing_values = sum(sum(ismissing(WT2)));
+WT3_missing_values = sum(sum(ismissing(WT3)));
+WT14_missing_values = sum(sum(ismissing(WT14))); % Var9 has 1 missing
+WT39_missing_values = sum(sum(ismissing(WT39)));
 
 % Check measurement and variable sizes
-[WT2_rows, WT2_cols] = size(WT2) % 1572×28 - One extra variable compared to WT14 and WT39
-[WT3_rows, WT3_cols] = size(WT3) % 699×31 - 4 Extra variables, so needs to be dropped
-[WT14_rows, WT14_cols] = size(WT14) % 687×27 - Same amount of variables as in WT39
-[WT39_rows, WT39_cols] = size(WT39) % 1406×27 - Same amount of variables as in WT14
+[WT2_rows, WT2_cols] = size(WT2); % 1572×28 - One extra variable compared to WT14 and WT39
+[WT3_rows, WT3_cols] = size(WT3); % 699×31 - 4 Extra variables, so needs to be dropped
+[WT14_rows, WT14_cols] = size(WT14); % 687×27 - Same amount of variables as in WT39
+[WT39_rows, WT39_cols] = size(WT39); % 1406×27 - Same amount of variables as in WT14
 
-%
+
 % WT2 has  one extra variable (last one) which needs to be dropped, so that
 % the data can be compared to WT14 and WT39. WT14 has one missing value,
 % which has to be handled. WT3 has 4 extra rows, and since the variables
@@ -91,7 +91,7 @@ WT39_missing_values = sum(sum(ismissing(WT39)))
 % WT39 have much more samples than WT14, which might be a problem. Some of
 % the values in the tables are integers, but most of the data is
 % float/double. 
-%
+
 % Casting tables to arrays and removing index rows
 X_WT2 = table2array(WT2);
 X_WT2(1,:) = [];
@@ -123,9 +123,6 @@ X_WT2_scaled = (X_WT2 - mean(X_WT2, 1)) ./ std(X_WT2, 1);
 X_WT14_scaled = (X_WT14 - mean(X_WT14, 1)) ./ std(X_WT14, 1);
 X_WT39_scaled = (X_WT39 - mean(X_WT39, 1)) ./ std(X_WT39, 1);
 
-
-
-%
 variable_names = {
     'Var1','Var2','Var3','Var4','Var5','Var6','Var7','Var8','Var9','Var10',...
     'Var11','Var12','Var13','Var14','Var15','Var16','Var17','Var18','Var19',...
@@ -144,9 +141,6 @@ end
 grid on;
 axis tight;
 
-
-%remov_cols = [12,13,15];
-%X_WT2_scaled(:,remov_cols) = [];
 % % Correlation matrix to see which variables are correlated with each other
 figure
 heatmap(corr(X_WT2))
@@ -155,221 +149,92 @@ ylabel('Var_i')
 title('Correlation matrix')
 colormap('parula') % Change the color map to your liking. All are awful in my opinion
 
-%%
 
-% Computing principal components, 
+% PCA COMPUTING
 [loadings_WT2, scores_WT2, eigen_values_WT2, tsquared_WT2, explained_WT2, mu_WT2] = pca(X_WT2_scaled);
 [loadings_WT14, scores_WT14, eigen_values_WT14, tsquared_WT14, explained_WT14, mu_WT14] = pca(X_WT14_scaled);
 [loadings_WT39, scores_WT39, eigen_values_WT39, tsquared_WT39, explained_WT39, mu_WT39] = pca(X_WT39_scaled);
 
 
-%
-
-%{
-The biplot is not normalized with respect to the scores.
-You need to bring the scores and loadings to the same variance
-for plotting for it to show anything. (teacher feedback)
-%}
-k = 6;
-P_k = loadings_WT2(:,1:k);
-P_WT14 = loadings_WT14(:,1:k);
-P_WT39 = loadings_WT39(:,1:k);
-scores_WT2 =  X_WT2_scaled * P_k(:,1:2);
-scores_WT14 = X_WT14_scaled * P_k(:,1:2); % project to wt2
-scores_WT39 = X_WT39_scaled * P_k(:,1:2); % project to wt2
-% normalize scores
-std_WT2 = std(scores_WT2);
-scores_WT2_norm = scores_WT2(:,1:2) ./ std_WT2;
-scores_WT14_norm = scores_WT14(:,1:2) ./ std_WT2;
-scores_WT39_norm = scores_WT39(:,1:2) ./ std_WT2;
-all_scores = [scores_WT2_norm;scores_WT14_norm;scores_WT39_norm];
-limits = 3;
-titles = {"WT2", "WT14", "WT39"};
-set_scores = {scores_WT2_norm,scores_WT14_norm,scores_WT39_norm};
-arr_scale = limits*1.05;
-% plot the scaled biplots
-load_magni = sqrt(P_k(:,1).^2 + P_k(:,2).^2);
-load_thres = 0.15;
-figure
-for i = 1:3
-    subplot(1,3,i)
-    hold on;
-    scatter(set_scores{i}(:,1), set_scores{i}(:,2),8,'filled');
-    for j = 1:size(P_k,1)
-        quiver(0,0,P_k(j,1)*arr_scale, P_k(j,2)*arr_scale,0, 'r');
-        if load_magni(j) > load_thres
-            text(P_k(j,1)*arr_scale, P_k(j,2)*arr_scale,...
-                variable_names{j}, 'Fontsize',12, 'Margin',4);
-        end
-    end
-    xlim([-limits, limits]);
-    ylim([-limits, limits]);
-    xlabel("PC1");
-    ylabel("PC2");
-    title(titles{i});
-    grid on;
-    hold off;
-end
-
-% most important fault variables: loadings vs healthy
-C14 = P_k'*P_WT14;
-C39 = P_k'*P_WT39;
-[~, matchIdx_14] = max(abs(C14),[],1);
-P_WT14_align = zeros(size(P_WT14));
-[~, matchIdx_39] = max(abs(C39),[],1);
-P_WT39_align = zeros(size(P_WT39));
-for j = 1:k
-    s1 = sign(C14(matchIdx_14(j),j));
-    s2 = sign(C39(matchIdx_39(j),j));
-    P_WT14_align(:, matchIdx_14(j)) = s1*P_WT14(:,j);
-    P_WT39_align(:,matchIdx_39(j)) = s2 *P_WT39(:,j);
-
-end
-diff_WT14 = sqrt(sum((P_k - P_WT14_align).^2,2));
-diff_WT39 = sqrt(sum((P_k - P_WT39_align).^2,2));
-
-[diff_WT4_ordered, idx14] = sort(diff_WT14,'descend');
-[diff_WT39_ordered, idx39] = sort(diff_WT39,'descend');
-disp("Most different variables to WT14");
-disp(variable_names(idx14(1:5)));
-disp("Most different variables to WT39");
-disp(variable_names(idx39(1:5)));
-isequal(X_WT14_scaled, X_WT39_scaled)
-isequal(diff_WT14, diff_WT39)
-
-% 20 first faulty observations
+% 20 FIRST OBSERVATIONS on faulty & PCA
 fault_WT14_20 = X_WT14_scaled(1:20,:);
 fault_WT39_20 = X_WT39_scaled(1:20,:);
 % calibrate
 [loadings_F_WT14, scoresFault14, ~, ~, explainedFault14, muFault14] = pca(fault_WT14_20);
 [loadings_F_WT39, scoresFault39, ~, ~, explainedFault39, muFault39] = pca(fault_WT39_20);
-k_val = 6;
-P_6 = loadings_WT2(:,1:k);
+% keep 6 PCs across the turbines
+k = 6;
+P_WT2 = loadings_WT2(:,1:k);
 P_WT14_20 = loadings_F_WT14(:,1:k);
 P_WT39_20 = loadings_F_WT39(:,1:k);
-%% 
+% checks the most different sensors
+loading_diff1 = abs(P_WT2(:,1) -P_WT14_20(:,1));
+loading_diff2 = abs(P_WT2(:,1) -P_WT39_20(:,1));
+% take two most different sensors
+[~, sorted_sensors] = sort(loading_diff1 + loading_diff2,...
+    'descend');
+% PLS modelling
+tgt_cols = sorted_sensors(1:2); % 1 & 21
+X_train = X_WT2_scaled;
+X_train(:,tgt_cols) = []; % take out Y
+Y_train = X_WT2_scaled(:,tgt_cols);
 %{
-% Computing biplot of the variables for each WT
-figure
-subplot(1,3,1)
-biplot(loadings_WT2(:,1:2), scores= scores_WT2(:,1:2), VarLabels=variable_names(1:24))
-title('WT2 PC1 & PC2 biplot')
-
-subplot(1,3,2)
-biplot(loadings_WT2(:,2:3), scores= scores_WT2(:,2:3), VarLabels=variable_names(1:24))
-title('WT2 PC2 & PC3 biplot')
-
-subplot(1,3,3)
-biplot(loadings_WT2(:,3:4), scores= scores_WT2(:,3:4), VarLabels=variable_names(1:24))
-title('WT2 PC3 & PC4 biplot')
-
-figure
-subplot(1,3,1)
-biplot(loadings_WT14(:,1:2), scores= scores_WT14(:,1:2), VarLabels=variable_names(1:24))
-title('WT14 PC1 & PC2 biplot')
-subplot(1,3,2)
-biplot(loadings_WT14(:,2:3), scores= scores_WT14(:,2:3), VarLabels=variable_names(1:24))
-title('WT14 PC2 & PC3 biplot')
-subplot(1,3,3)
-biplot(loadings_WT14(:,3:4), scores= scores_WT14(:,3:4), VarLabels=variable_names(1:24))
-title('WT14 PC3 & PC4 biplot')
-
-figure
-subplot(1,3,1)
-biplot(loadings_WT39(:,1:2), scores= scores_WT39(:,1:2), VarLabels=variable_names(1:24))
-title('WT39 PC1 & PC2 biplot')
-subplot(1,3,2)
-biplot(loadings_WT39(:,2:3), scores= scores_WT39(:,2:3), VarLabels=variable_names(1:24))
-title('WT39 PC2 & PC3 biplot')
-subplot(1,3,3)
-biplot(loadings_WT39(:,3:4), scores= scores_WT39(:,3:4), VarLabels=variable_names(1:24))
-title('WT39 PC3 & PC4 biplot')
-
+For	the	healthy	turbine, create	 PLS models	to estimate	the values
+of two important sensors.   
 %}
-% 
-% Plotting T^2 values.
-figure
-subplot(1,3,1)
-plot(tsquared_WT2)
-xlabel('Measurements')
-ylabel('T^2 Scores')
-title('WT2 T^2 Chart')
-subplot(1,3,2)
-plot(tsquared_WT14)
-xlabel('Measurements')
-ylabel('T^2 Scores')
-title('WT14 T^2 Chart')
-subplot(1,3,3)
-plot(tsquared_WT39)
-xlabel('Measurements')
-ylabel('T^2 Scores')
-title('WT39 T^2 Chart')
+N = size(X_train,1); %number of samples
+max_lv = 6; % upper limit from PCA
+train_size = round(0.5*N);
+vali_size = round(0.1*N);
+step_size = vali_size;
+rmse_crossv = zeros(max_lv,1); % CV RMSE
 
-
-% Plotting the explained variance
-figure
-subplot(1,3,1)
-plot(cumsum(explained_WT2) / sum(explained_WT2))
-title('WT2 Explained Variance Plot')
-xlabel('Components')
-ylabel('Explained Variance Fraction')
-
-subplot(1,3,2)
-plot(cumsum(explained_WT14) / sum(explained_WT14))
-title('WT14 Explained Variance Plot')
-xlabel('Components')
-ylabel('Explained Variance Fraction')
-
-subplot(1,3,3)
-plot(cumsum(explained_WT39) / sum(explained_WT39))
-title('WT39 Explained Variance Plot')
-xlabel('Components')
-ylabel('Explained Variance Fraction')
-
-% Loadings histograms to see the importance of the variables
-figure
-for i = 1 : 9
-    subplot(3, 3, i)
-    bar(loadings_WT2(:,i))
-    xticks(1:28)
-    xticklabels(variable_names)
-    title(['WT2 PC',num2str(i),' loadings'])
+for lv = 1:max_lv
+    vali_err = [];
+    % rollign window
+    for start_i = 1:step_size:(N-train_size...
+            -vali_size+1)
+        train_i = start_i : (start_i + train_size+1);
+        vali_i = (start_i + train_size) : ...
+            (start_i + train_size + vali_size - 1);
+        X_tr = X_train(train_i,:);
+        Y_tr = Y_train(train_i,:);
+        X_va = X_train(vali_i,:);
+        Y_va = Y_train(vali_i,:);
+        % pls fit
+        [~,~,~, ~, BETA] = plsregress(X_tr, Y_tr, lv);
+        % prediction on validation portion
+        Y_va_pred = [ones(length(vali_i),1), X_va]*BETA;
+        % calculate errors
+        fold_rmse = sqrt(mean((Y_va - Y_va_pred).^2, 'all'));
+        vali_err = [vali_err; fold_rmse];
+    end
+    rmse_crossv(k) = mean(vali_err);
 end
-
-figure
-for i = 1 : 9
-    subplot(3, 3, i)
-    bar(loadings_WT14(:,i))
-    xticks(1:28)
-    xticklabels(variable_names)
-    title(['WT14 PC',num2str(i),' loadings'])
-end
-
-figure
-for i = 1 : 9
-    subplot(3, 3, i)
-    bar(loadings_WT39(:,i))
-    xticks(1:28)
-    xticklabels(variable_names)
-    title(['WT39 PC',num2str(i),' loadings'])
-end
-% 
-% % Correlation matrix to see which variables are correlated with each other
-% figure
-% heatmap(corr(X_standardized))
-% xlabel('Var_i')
-% ylabel('Var_i')
-% title('Correlation matrix')
-% colormap('hot') % Change the color map to your liking. All are awful in my opinion
-
-% 
-% figure
-% [rows, cols] = size(X_standardized);
-% 
-% for i = 1 : cols
-%     subplot(7, 4, i)
-%     plot(1:rows, X_standardized(:,i))
-%     xlabel('Time')
-%     ylabel('Signal')
-%     title(['Var',num2str(i)])
-% end
+% choose the best number of latent variables
+[~, best_nLV] = min(rmse_crossv);
+% fit with the best num of lv
+[XL, YL, XS, YS, BETA2] =....
+    plsregress(X_train,Y_train, best_nLV);
+% predict healthy turbine values
+Y_train_pred = [ones(N,1), X_train]*BETA;
+train_RMSE = sqrt(mean((Y_train- Y_train_pred).^2,1));
+% so we got 0.88 rmse on first, 0.42 on 2nd
+% now test on a faulty turbine
+Y_test_WT14 = X_WT14_scaled(:,tgt_cols);
+Y_test_WT39 = X_WT39_scaled(:,tgt_cols);
+X_test_WT14 = X_WT14_scaled;
+X_test_WT14(:,tgt_cols) = []; % remove Y
+X_test_WT39 = X_WT39_scaled;
+X_test_WT39(:,tgt_cols) = [];
+% predict with healthy model faulty turbine values
+Y_test_WT14_pred = [ones(size(X_test_WT14,1),1), X_test_WT14]*BETA;
+Y_test_WT39_pred = [ones(size(X_test_WT39,1),1), X_test_WT39]*BETA;
+% compute the residuals
+res_WT14 = Y_test_WT14  - Y_test_WT14_pred;
+res_WT39 = Y_test_WT39 - Y_test_WT39_pred;
+% rmses
+test_RMSE_WT14 = sqrt(mean((res_WT14).^2,1));
+test_RMSE_WT39 = sqrt(mean((res_WT39).^2,1));
+% for Wt14: 1.05 and 1.14
+% for WT39 1.02 and 1.08
