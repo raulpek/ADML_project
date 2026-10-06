@@ -168,8 +168,8 @@ P_WT2 = loadings_WT2(:,1:k);
 P_WT14_20 = loadings_F_WT14(:,1:k);
 P_WT39_20 = loadings_F_WT39(:,1:k);
 % checks the most different sensors
-loading_diff1 = abs(P_WT2(:,1) -P_WT14_20(:,1));
-loading_diff2 = abs(P_WT2(:,1) -P_WT39_20(:,1));
+loading_diff1 = min(abs(P_WT2(:,1) - P_WT14_20(:,1)), abs(P_WT2(:,1) + P_WT14_20(:,1)));
+loading_diff2 = min(abs(P_WT2(:,1) - P_WT39_20(:,1)), abs(P_WT2(:,1) + P_WT39_20(:,1)));
 % take two most different sensors
 [~, sorted_sensors] = sort(loading_diff1 + loading_diff2,...
     'descend');
@@ -191,10 +191,12 @@ rmse_crossv = zeros(max_lv,1); % CV RMSE
 
 for lv = 1:max_lv
     vali_err = [];
-    % rollign window
+    ss_res_vec = []; % residual sum of squares
+    ss_tot_vec = []; % total sum of squares
+    % rolling window
     for start_i = 1:step_size:(N-train_size...
             -vali_size+1)
-        train_i = start_i : (start_i + train_size+1);
+        train_i = start_i : (start_i + train_size - 1);
         vali_i = (start_i + train_size) : ...
             (start_i + train_size + vali_size - 1);
         X_tr = X_train(train_i,:);
@@ -205,19 +207,27 @@ for lv = 1:max_lv
         [~,~,~, ~, BETA] = plsregress(X_tr, Y_tr, lv);
         % prediction on validation portion
         Y_va_pred = [ones(length(vali_i),1), X_va]*BETA;
-        % calculate errors
+        % calculate errors and square sums
+        res = Y_va - Y_va_pred;
         fold_rmse = sqrt(mean((Y_va - Y_va_pred).^2, 'all'));
         vali_err = [vali_err; fold_rmse];
+
+        % For Q2 calculation (comparing to training window's average)
+        ss_res_vec = [ss_res_vec; sum(res.^2, 'all')];
+        ss_tot_vec = [ss_tot_vec; sum((Y_va - mean(Y_tr, 1)).^2, 'all')];
     end
-    rmse_crossv(k) = mean(vali_err);
+    % Mean RMSE_CV and Q^2 for the amount of LVs
+    rmse_crossv(lv) = mean(vali_err);
+    q2_crossv(lv)   = 1 - (sum(ss_res_vec) / sum(ss_tot_vec));
 end
 % choose the best number of latent variables
 [~, best_nLV] = min(rmse_crossv);
+
 % fit with the best num of lv
 [XL, YL, XS, YS, BETA2] =....
     plsregress(X_train,Y_train, best_nLV);
 % predict healthy turbine values
-Y_train_pred = [ones(N,1), X_train]*BETA;
+Y_train_pred = [ones(N,1), X_train]*BETA2;
 train_RMSE = sqrt(mean((Y_train- Y_train_pred).^2,1));
 % so we got 0.88 rmse on first, 0.42 on 2nd
 % now test on a faulty turbine
@@ -228,8 +238,8 @@ X_test_WT14(:,tgt_cols) = []; % remove Y
 X_test_WT39 = X_WT39_scaled;
 X_test_WT39(:,tgt_cols) = [];
 % predict with healthy model faulty turbine values
-Y_test_WT14_pred = [ones(size(X_test_WT14,1),1), X_test_WT14]*BETA;
-Y_test_WT39_pred = [ones(size(X_test_WT39,1),1), X_test_WT39]*BETA;
+Y_test_WT14_pred = [ones(size(X_test_WT14,1),1), X_test_WT14]*BETA2;
+Y_test_WT39_pred = [ones(size(X_test_WT39,1),1), X_test_WT39]*BETA2;
 % compute the residuals
 res_WT14 = Y_test_WT14  - Y_test_WT14_pred;
 res_WT39 = Y_test_WT39 - Y_test_WT39_pred;
@@ -238,6 +248,89 @@ test_RMSE_WT14 = sqrt(mean((res_WT14).^2,1));
 test_RMSE_WT39 = sqrt(mean((res_WT39).^2,1));
 % for Wt14: 1.05 and 1.14
 % for WT39 1.02 and 1.08
+
+%% Plot of predictions vs actual values
+% Graph for sensor 1
+figure('Name', 'Sensor 1 predictions across turbines');
+
+% Healthy turbine (WT2)
+subplot(3,1,1);
+plot(Y_train(:,1), 'k', 'LineWidth', 1); hold on;
+plot(Y_train_pred(:,1), 'r--', 'LineWidth', 1);
+title('Healthy turbine (WT2) - Sensor 1');
+ylabel('Scaled value'); legend('Truth', 'Prediction'); grid on;
+
+% Faulty turbine (WT14)
+subplot(3,1,2);
+plot(Y_test_WT14(:,1), 'k', 'LineWidth', 1); hold on;
+plot(Y_test_WT14_pred(:,1), 'r--', 'LineWidth', 1);
+title('Faulty turbine (WT14) - Sensor 1');
+ylabel('Scaled value'); grid on;
+
+% Faulty turbine 2 (WT39)
+subplot(3,1,3);
+plot(Y_test_WT39(:,1), 'k', 'LineWidth', 1); hold on;
+plot(Y_test_WT39_pred(:,1), 'r--', 'LineWidth', 1);
+title('Faulty turbine (WT39) - Sensor 1');
+xlabel('Time / Observation-index'); ylabel('Scaled value'); grid on;
+
+
+%% Residual plot / Control chart
+figure('Name', 'Residual Analysis');
+
+% Calculating the residuals also for the training data
+res_train = Y_train - Y_train_pred;
+
+% Statistical threshold limit (3*std here for the healthy data)
+threshold_s1 = 3 * std(res_train(:,1));
+
+plot(res_train(:,1), 'g', 'DisplayName', 'WT2 (Healthy)'); hold on;
+plot(res_WT14(:,1), 'r', 'DisplayName', 'WT14 (Faulty)');
+plot(res_WT39(:,1), 'm', 'DisplayName', 'WT39 (Faulty)');
+
+% Plotting the alarm limits (dashed lines)
+yline(threshold_s1, 'k--', '3\sigma limits', 'LineWidth', 1.5);
+yline(-threshold_s1, 'k--', 'LineWidth', 1.5);
+
+title('Residuals (Sensor 1) and fault detection threshold');
+xlabel('Observation-index'); ylabel('Residual');
+legend('Location', 'best'); grid on;
+
+%% RMSE_CV and Q^2
+% Determining the components to x-axle
+lvs = 1:max_lv;
+
+figure('Name', 'PLS Model Diagnostics', 'Color', [1 1 1], 'Position', [100, 100, 1000, 400]);
+
+% Left plot: RMSECV
+subplot(1, 2, 1);
+plot(lvs, rmse_crossv, '-o', 'LineWidth', 2, 'MarkerSize', 6, 'Color', [0 0.4470 0.7410]);
+hold on;
+% Highlighting the chosen point
+plot(best_nLV, rmse_crossv(best_nLV), 'rs', 'MarkerSize', 10, 'LineWidth', 2, 'MarkerFaceColor', 'r');
+xline(best_nLV, '--k', 'LineWidth', 1);
+
+xlabel('Number of latent variables (LV)', 'FontSize', 11);
+ylabel('RMSECV', 'FontSize', 11);
+title('CV error (RMSECV)', 'FontSize', 12);
+xticks(lvs);
+grid on;
+legend('RMSECV', sprintf('Chosen nLV = %d', best_nLV), 'Location', 'northeast');
+
+% Right plot: Q^2
+subplot(1, 2, 2);
+plot(lvs, q2_crossv, '-s', 'LineWidth', 2, 'MarkerSize', 6, 'Color', [0.8500 0.3250 0.0980]);
+hold on;
+% Highlighting the chosen point
+plot(best_nLV, q2_crossv(best_nLV), 'rs', 'MarkerSize', 10, 'LineWidth', 2, 'MarkerFaceColor', 'r');
+xline(best_nLV, '--k', 'LineWidth', 1);
+
+xlabel('Number of latent variables (LV)', 'FontSize', 11);
+ylabel('Q^2', 'FontSize', 11);
+title('Predictive ability (Q^2)', 'FontSize', 12);
+xticks(lvs);
+grid on;
+legend('Q^2', sprintf('Chosen nLV = %d', best_nLV), 'Location', 'southeast');
 
 %{
 We get good results of the PLS model
