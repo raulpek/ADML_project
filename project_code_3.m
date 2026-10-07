@@ -101,8 +101,8 @@ X_WT39(:,WT2_zerovar) = [];
 
 % Standardize datasets
 X_WT2_scaled = (X_WT2 - mean(X_WT2, 1)) ./ std(X_WT2, 1);
-X_WT14_scaled = (X_WT14 - mean(X_WT14, 1)) ./ std(X_WT14, 1);
-X_WT39_scaled = (X_WT39 - mean(X_WT39, 1)) ./ std(X_WT39, 1);
+X_WT14_scaled = (X_WT14 - mean(X_WT2, 1)) ./ std(X_WT2, 1);
+X_WT39_scaled = (X_WT39 - mean(X_WT2, 1)) ./ std(X_WT2, 1);
 
 
 % Variable identifiers for the plots
@@ -370,7 +370,7 @@ legend('Q^2', sprintf('Chosen nLV = %d', best_nLV), 'Location', 'southeast');
 Y_train_pred = [ones(N,1), X_train]*BETA2;
 train_RMSE = sqrt(mean((Y_train- Y_train_pred).^2,1));
 
-% so we got 0.88 rmse on first, 0.04 on 2nd
+% so we got 0.88 rmse on first, 0.46 on 2nd
 % now test on a faulty turbine
 Y_test_WT14 = X_WT14_scaled(:,tgt_cols);
 Y_test_WT39 = X_WT39_scaled(:,tgt_cols);
@@ -391,8 +391,8 @@ res_WT39 = Y_test_WT39 - Y_test_WT39_pred;
 test_RMSE_WT14 = sqrt(mean((res_WT14).^2,1));
 test_RMSE_WT39 = sqrt(mean((res_WT39).^2,1));
 
-% for Wt14: 1.01 and 0.22
-% for WT39 0.98 and 0.19
+% for Wt14: 76.8 and 1600.1
+% for WT39 94.1 and 1897.4
 
 %% Prediction and control chart visualizations
 % Plot of predictions vs actual values
@@ -453,11 +453,11 @@ disp(test_RMSE_WT39);
 
 %{
 We get good regression performance for the healthy turbine (WT2),
-especially for Sensor 2 (RMSE = 0.0376).
+especially for Sensor 2 (RMSE = 0.4607).
 
 On the faulty turbines, the regression performance degrades
-significantly. For Sensor 2, the RMSE increases from 0.0376 to 0.2178 on WT14
-and to 0.1910 on WT39 (roughly a 5–6x increase in prediction error).
+significantly. For Sensor 2, the RMSE increases from 0.4607 to 76.8389 on WT14
+and to 1897.4158 on WT39.
 
 Conclusion: The PLS model trained on healthy baseline data is unable to
 maintain its regression performance on faulty turbines, demonstrating
