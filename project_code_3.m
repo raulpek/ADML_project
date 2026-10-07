@@ -98,12 +98,25 @@ X_WT2(:,WT2_zerovar) = [];
 X_WT14(:,WT2_zerovar) = [];
 X_WT39(:,WT2_zerovar) = [];
 
+% Splitting WT2 into calibration (80%) and holdout validation (20%)
+N_WT2 = size(X_WT2, 1);
+n_cal = round(0.8 * N_WT2);
 
-% Standardize datasets
-X_WT2_scaled = (X_WT2 - mean(X_WT2, 1)) ./ std(X_WT2, 1);
-X_WT14_scaled = (X_WT14 - mean(X_WT2, 1)) ./ std(X_WT2, 1);
-X_WT39_scaled = (X_WT39 - mean(X_WT2, 1)) ./ std(X_WT2, 1);
+X_WT2_cal = X_WT2(1:n_cal, :); % Calibration set
+X_WT2_val = X_WT2(n_cal+1:end, :); % Validation set
 
+% Calculating the mean and std from the calibration data
+mu_cal = mean(X_WT2_cal, 1);
+sigma_cal = std(X_WT2_cal, 1);
+
+% Standardizing the datasets using only the calibration statistics
+X_WT2_cal_scaled = (X_WT2_cal - mu_cal) ./ sigma_cal;
+X_WT2_val_scaled = (X_WT2_val - mu_cal) ./ sigma_cal;
+X_WT14_scaled = (X_WT14 - mu_cal) ./ sigma_cal;
+X_WT39_scaled = (X_WT39 - mu_cal) ./ sigma_cal;
+
+% Full scaled WT2 for visualization purpose
+X_WT2_scaled = (X_WT2 - mu_cal) ./ sigma_cal;
 
 % Variable identifiers for the plots
 n_vars = size(X_WT2, 2);
@@ -264,7 +277,7 @@ loading_diff2 = sum(diff2_matrix, 2);
 % Take two most different sensors as the target variables Y
 [~, sorted_sensors] = sort(loading_diff1 + loading_diff2,...
     'descend');
-tgt_cols = sorted_sensors(1:2); % Most different sensors: 1 & 3
+tgt_cols = sorted_sensors(1:2); % Most different sensors: 1 & 19
 
 %% PLS modeling and  cross-validation
 
@@ -362,37 +375,41 @@ legend('Q^2', sprintf('Chosen nLV = %d', best_nLV), 'Location', 'southeast');
 
 %% Final model fit and testing with faulty turbine data
 
-% fit with the best num of lv
-[XL, YL, XS, YS, BETA2] =....
-    plsregress(X_train,Y_train, best_nLV);
+% Train PLS model on Calibration data (WT2_cal, 80%)
+X_train = X_WT2_cal_scaled; 
+X_train(:, tgt_cols) = []; % Prediction matrix X
+Y_train = X_WT2_cal_scaled(:, tgt_cols); % Target variables Y
 
-% predict healthy turbine values
-Y_train_pred = [ones(N,1), X_train]*BETA2;
-train_RMSE = sqrt(mean((Y_train- Y_train_pred).^2,1));
+% Fit model using the optimal number of latent variables chosen in CV
+[XL, YL, XS, YS, BETA2] = plsregress(X_train, Y_train, best_nLV);
 
-% so we got 0.88 rmse on first, 0.46 on 2nd
-% now test on a faulty turbine
-Y_test_WT14 = X_WT14_scaled(:,tgt_cols);
-Y_test_WT39 = X_WT39_scaled(:,tgt_cols);
-X_test_WT14 = X_WT14_scaled;
-X_test_WT14(:,tgt_cols) = []; % remove Y
-X_test_WT39 = X_WT39_scaled;
-X_test_WT39(:,tgt_cols) = [];
+% Predict on Calibration data (WT2_cal, 80%)
+Y_train_pred = [ones(size(X_train,1), 1), X_train] * BETA2;
+train_RMSE = sqrt(mean((Y_train - Y_train_pred).^2, 1));
 
-% predict with healthy model faulty turbine values
-Y_test_WT14_pred = [ones(size(X_test_WT14,1),1), X_test_WT14]*BETA2;
-Y_test_WT39_pred = [ones(size(X_test_WT39,1),1), X_test_WT39]*BETA2;
+% Predict on Healthy Holdout Validation data (WT2_val, 20%)
+X_val_healthy = X_WT2_val_scaled; 
+X_val_healthy(:, tgt_cols) = [];
+Y_val_healthy = X_WT2_val_scaled(:, tgt_cols);
 
-% compute the residuals
-res_WT14 = Y_test_WT14  - Y_test_WT14_pred;
+Y_val_pred = [ones(size(X_val_healthy,1), 1), X_val_healthy] * BETA2;
+val_RMSE = sqrt(mean((Y_val_healthy - Y_val_pred).^2, 1));
+
+% Predict on Faulty turbines (WT14 & WT39)
+X_test_WT14 = X_WT14_scaled; X_test_WT14(:, tgt_cols) = [];
+Y_test_WT14 = X_WT14_scaled(:, tgt_cols);
+Y_test_WT14_pred = [ones(size(X_test_WT14,1), 1), X_test_WT14] * BETA2;
+
+X_test_WT39 = X_WT39_scaled; X_test_WT39(:, tgt_cols) = [];
+Y_test_WT39 = X_WT39_scaled(:, tgt_cols);
+Y_test_WT39_pred = [ones(size(X_test_WT39,1), 1), X_test_WT39] * BETA2;
+
+% Compute residuals and test RMSEs for faulty turbines
+res_WT14 = Y_test_WT14 - Y_test_WT14_pred;
 res_WT39 = Y_test_WT39 - Y_test_WT39_pred;
 
-% rmses
-test_RMSE_WT14 = sqrt(mean((res_WT14).^2,1));
-test_RMSE_WT39 = sqrt(mean((res_WT39).^2,1));
-
-% for Wt14: 76.8 and 1600.1
-% for WT39 94.1 and 1897.4
+test_RMSE_WT14 = sqrt(mean((res_WT14).^2, 1));
+test_RMSE_WT39 = sqrt(mean((res_WT39).^2, 1));
 
 %% Prediction and control chart visualizations
 % Plot of predictions vs actual values
@@ -442,22 +459,22 @@ title('Residuals (Sensor 1) and fault detection threshold');
 xlabel('Observation-index'); ylabel('Residual');
 legend('Location', 'best'); grid on;
 
-disp('Healthy WT2 Train RMSE (Sensor 1 & Sensor 2):');
+disp('Healthy WT2 Train RMSE (Sensor 1 & Sensor 19):');
 disp(train_RMSE);
 
-disp('Faulty WT14 Test RMSE (Sensor 1 & Sensor 2):');
+disp('Faulty WT14 Test RMSE (Sensor 1 & Sensor 19):');
 disp(test_RMSE_WT14);
 
-disp('Faulty WT39 Test RMSE (Sensor 1 & Sensor 2):');
+disp('Faulty WT39 Test RMSE (Sensor 1 & Sensor 19):');
 disp(test_RMSE_WT39);
 
 %{
 We get good regression performance for the healthy turbine (WT2),
-especially for Sensor 2 (RMSE = 0.4607).
+especially for Sensor 19 (RMSE = 0.5651).
 
 On the faulty turbines, the regression performance degrades
-significantly. For Sensor 2, the RMSE increases from 0.4607 to 76.8389 on WT14
-and to 1897.4158 on WT39.
+significantly. For Sensor 19, the RMSE increases from 0.5651 to 1244.6 on WT14
+and to 1401.3 on WT39.
 
 Conclusion: The PLS model trained on healthy baseline data is unable to
 maintain its regression performance on faulty turbines, demonstrating
