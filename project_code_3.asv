@@ -144,22 +144,19 @@ corr_matrix = corr(X_WT2);
 % Extract lower triangular of the correlation matrix
 L_corr_matrix = tril(corr_matrix);
 
-% Filter out low correlation elements
-corr_threshold = 0.5;
-L_corr_matrix(abs(L_corr_matrix) < corr_threshold) = 0;
-
-% Remove diagonal correlations, since they do not give any information
-L_corr_matrix(abs(L_corr_matrix) == 1) = 0;
+% Find elements, which have significant correlation, i.e. +-0.75
+corr_threshold = 0.75;
+[i, j] = find(abs(L_corr_matrix) < corr_threshold);
+L_corr_matrix(i, j) = 0;
 
 % Blue-white-red color scale
 custom_map = [linspace(0,1,100)', linspace(0,1,100)', ones(100,1); ...
               ones(100,1), linspace(1,0,100)', linspace(1,0,100)'];
 
-hmap = heatmap(var_labels, var_labels, L_corr_matrix, ...
+heatmap(var_labels, var_labels, L_corr_matrix, ...
     'Colormap', custom_map, ...
     'ColorLimits', [-1, 1], ...
     'CellLabelColor', 'none');
-hmap.FontSize = 18; % Increase font size so that it is easier to see the variable names in the plot
 
 title('Correlation Matrix - Healthy WT2');
 
@@ -190,9 +187,9 @@ end
 % Scree plot - Explained variance
 figure('Name', 'PCA Scree Plot', 'Color', 'w');
 pareto(explained_WT2);
-xlabel('Principal Component', 'FontSize',18);
-ylabel('Variance Explained (%)', 'FontSize',18);
-title('Scree Plot - WT2 Healthy Turbine', 'FontSize',14);
+xlabel('Principal Component');
+ylabel('Variance Explained (%)');
+title('Scree Plot - WT2 Healthy Turbine');
 
 % Biplot for PC1 and PC2
 figure('Name', 'PCA Biplot', 'Color', 'w');
@@ -221,7 +218,6 @@ scatter(scores_WT2_norm(:,1), scores_WT2_norm(:,2), 15, 1:num_obs, 'filled');
 colormap(jet);
 c = colorbar;
 c.Label.String = 'Observation Index (Time)';
-c.FontSize = 16;
 hold on;
 
 % Plot loading vectors overlaid on the same normalized scale
@@ -234,9 +230,9 @@ quiver(zeros(n_vars, 1), zeros(n_vars, 1), ...
 text(loadings_WT2(:,1)*scaling_factor*1.1, loadings_WT2(:,2)*scaling_factor*1.1, ...
     var_labels, 'Color', 'r', 'FontSize', 8, 'FontWeight', 'bold');
 
-xlabel('Normalized PC1 Scores', 'FontSize', 18);
-ylabel('Normalized PC2 Scores', 'FontSize', 18);
-title('Normalized PCA Biplot with Time Trajectory (WT2)', 'FontSize',20);
+xlabel('Normalized PC1 Scores');
+ylabel('Normalized PC2 Scores');
+title('Normalized PCA Biplot with Time Trajectory (WT2)');
 grid on;
 
 
@@ -289,14 +285,14 @@ loading_diff2 = sum(diff2_matrix, 2);
 % Take two most different sensors as the target variables Y
 [~, sorted_sensors] = sort(loading_diff1 + loading_diff2,...
     'descend');
-target_cols = sorted_sensors(1:2); % Most different sensors: 1 & 19
+tgt_cols = sorted_sensors(1:2); % Most different sensors: 1 & 19
 
 %% PLS modeling and  cross-validation
 
 % PLS modeling
 X_train = X_WT2_scaled;
-X_train(:,target_cols) = []; % take out Y
-Y_train = X_WT2_scaled(:,target_cols);
+X_train(:,tgt_cols) = []; % take out Y
+Y_train = X_WT2_scaled(:,tgt_cols);
 
 %{
 For	the	healthy	turbine, create	 PLS models	to estimate	the values
@@ -389,8 +385,8 @@ legend('Q^2', sprintf('Chosen nLV = %d', best_nLV), 'Location', 'southeast');
 
 % Train PLS model on Calibration data (WT2_cal, 80%)
 X_train = X_WT2_cal_scaled; 
-X_train(:, target_cols) = []; % Prediction matrix X
-Y_train = X_WT2_cal_scaled(:, target_cols); % Target variables Y
+X_train(:, tgt_cols) = []; % Prediction matrix X
+Y_train = X_WT2_cal_scaled(:, tgt_cols); % Target variables Y
 
 % Fit model using the optimal number of latent variables chosen in CV
 [XL, YL, XS, YS, BETA2] = plsregress(X_train, Y_train, best_nLV);
@@ -401,19 +397,19 @@ train_RMSE = sqrt(mean((Y_train - Y_train_pred).^2, 1));
 
 % Predict on Healthy Holdout Validation data (WT2_val, 20%)
 X_val_healthy = X_WT2_val_scaled; 
-X_val_healthy(:, target_cols) = [];
-Y_val_healthy = X_WT2_val_scaled(:, target_cols);
+X_val_healthy(:, tgt_cols) = [];
+Y_val_healthy = X_WT2_val_scaled(:, tgt_cols);
 
 Y_val_pred = [ones(size(X_val_healthy,1), 1), X_val_healthy] * BETA2;
 val_RMSE = sqrt(mean((Y_val_healthy - Y_val_pred).^2, 1));
 
 % Predict on Faulty turbines (WT14 & WT39)
-X_test_WT14 = X_WT14_scaled; X_test_WT14(:, target_cols) = [];
-Y_test_WT14 = X_WT14_scaled(:, target_cols);
+X_test_WT14 = X_WT14_scaled; X_test_WT14(:, tgt_cols) = [];
+Y_test_WT14 = X_WT14_scaled(:, tgt_cols);
 Y_test_WT14_pred = [ones(size(X_test_WT14,1), 1), X_test_WT14] * BETA2;
 
-X_test_WT39 = X_WT39_scaled; X_test_WT39(:, target_cols) = [];
-Y_test_WT39 = X_WT39_scaled(:, target_cols);
+X_test_WT39 = X_WT39_scaled; X_test_WT39(:, tgt_cols) = [];
+Y_test_WT39 = X_WT39_scaled(:, tgt_cols);
 Y_test_WT39_pred = [ones(size(X_test_WT39,1), 1), X_test_WT39] * BETA2;
 
 % Compute residuals and test RMSEs for faulty turbines
@@ -460,12 +456,12 @@ times_std = 3;
 threshold_s1 = times_std * std(res_train(:,1));
 
 plot(res_train(:,1), 'g', 'DisplayName', 'WT2 (Healthy)'); hold on;
-plot(res_WT14(:,1), 'y', 'DisplayName', 'WT14 (Faulty)');
+plot(res_WT14(:,1), 'r', 'DisplayName', 'WT14 (Faulty)');
 plot(res_WT39(:,1), 'm', 'DisplayName', 'WT39 (Faulty)');
 
 % Plotting the alarm limits (dashed lines)
-yline(threshold_s1, 'r--', '3\sigma limits', 'LineWidth', 1.5, 'DisplayName','UCL');
-yline(-threshold_s1, 'b--', 'LineWidth', 1.5, 'DisplayName','LCL');
+yline(threshold_s1, 'k--', '3\sigma limits', 'LineWidth', 1.5, 'HandleVisibility', 'off');
+yline(-threshold_s1, 'k--', 'LineWidth', 1.5, 'HandleVisibility', 'off');
 
 title('Residuals (Sensor 1) and fault detection threshold');
 xlabel('Observation-index'); ylabel('Residual');
