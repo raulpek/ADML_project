@@ -124,6 +124,7 @@ var_labels = arrayfun(@(x) sprintf('Var%d', x), 1:n_vars, 'UniformOutput', false
 
 %% Visualisation of the pretreated variables and their correlations
 
+
 % Time-series plot of the normalized variables (Healthy WT2)
 figure('Name', 'Pretreated variabes (WT2)', 'Color','w');
 title('Overlay of 28 variables');
@@ -144,7 +145,7 @@ corr_matrix = corr(X_WT2);
 % Extract lower triangular of the correlation matrix
 L_corr_matrix = tril(corr_matrix);
 
-% Filter out low correlation elements
+% Filter out low correlation elements to make the hmap clearer
 corr_threshold = 0.5;
 L_corr_matrix(abs(L_corr_matrix) < corr_threshold) = 0;
 
@@ -164,18 +165,19 @@ hmap.FontSize = 18; % Increase font size so that it is easier to see the variabl
 title('Correlation Matrix - Healthy WT2');
 
 % Select 1 and 2 as interesting variables to observe fault behavior
-selected_vars = [1, 2]; 
-
-for v = selected_vars
-    figure('Name', sprintf('Variable %d Comparison Across Turbines', v), 'Color', 'w');
+selected_vars = [19, 21]; %3, 5, 10, 13, 19, 21 seems interesting
+%figure('Name', sprintf('Variable %d Comparison Across Turbines', v), 'Color', 'w');
+figure('Name', sprintf('Variable Comparison Across Turbines'))
+for i = 1 : 2
+    v = selected_vars(i);
+    subplot(2,1,i)
+    plot(X_WT2_scaled(1:686, v), 'k', 'LineWidth', 1, 'DisplayName', 'WT2 (Healthy)'); hold on;
+    plot(X_WT14_scaled(1:686, v), 'r', 'LineWidth', 1, 'DisplayName', 'WT14 (Faulty)');
+    plot(X_WT39_scaled(1:686, v), 'b', 'LineWidth', 1, 'DisplayName', 'WT39 (Faulty)');
     
-    plot(X_WT2_scaled(:, v), 'g', 'LineWidth', 1, 'DisplayName', 'WT2 (Healthy)'); hold on;
-    plot(X_WT14_scaled(:, v), 'r', 'LineWidth', 1, 'DisplayName', 'WT14 (Faulty)');
-    plot(X_WT39_scaled(:, v), 'm', 'LineWidth', 1, 'DisplayName', 'WT39 (Faulty)');
-    
-    title(sprintf('Behavior of Variable %d Across All Turbines', v));
-    xlabel('Observation Index (Time)');
-    ylabel('Scaled Value');
+    title(sprintf('Behavior of Variable %d Across All Turbines', v), "FontSize",18);
+    xlabel('Observation Index (Time)', 'FontSize',18);
+    ylabel('Scaled Value', 'FontSize',18);
     legend('Location', 'best');
     grid on;
 end
@@ -492,3 +494,4 @@ Conclusion: The PLS model trained on healthy baseline data is unable to
 maintain its regression performance on faulty turbines, demonstrating
 that the learned physical relationship between sensors breaks down during a fault.
 %}
+
