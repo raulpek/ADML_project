@@ -95,9 +95,22 @@ WT39_zerovar = var(X_WT39) < 1e-3;
 
 % Dropping zero variance variables
 X_WT2(:,WT2_zerovar) = [];
-X_WT14(:,WT2_zerovar) = [];
-X_WT39(:,WT2_zerovar) = [];
+X_WT14(:,WT14_zerovar) = [];
+X_WT39(:,WT39_zerovar) = [];
 
+% test: try dropping variables
+test_drop = false;
+drop_list = [4,6, 16, 17, 23]; % dropping a correlated pair
+drop_list = drop_list(drop_list <= size(X_WT2,2));
+if test_drop
+    X_WT2(:,drop_list) = [];
+    X_WT14(:,drop_list) = [];
+    X_WT39(:,drop_list) = [];
+end
+common_cols = true(1, size(X_WT2,2));
+X_WT2 = X_WT2(:,common_cols);
+X_WT14 = X_WT14(:,common_cols);
+X_WT39 = X_WT39(:,common_cols);
 % Splitting WT2 into calibration (80%) and holdout validation (20%)
 N_WT2 = size(X_WT2, 1);
 n_cal = round(0.8 * N_WT2);
@@ -154,7 +167,7 @@ title('Correlation Matrix - Healthy WT2');
 %exportgraphics(fig1, 'Figures/WT2_corr_matrix.pdf', 'ContentType', 'vector');
 
 % Select 1 and 2 as interesting variables to observe fault behavior
-selected_vars = [19, 21]; %3, 5, 10, 13, 19, 21 seems interesting
+selected_vars = [3,5]; %3, 5, 10, 13, 19, 21 seems interesting
 %figure('Name', sprintf('Variable %d Comparison Across Turbines', v), 'Color', 'w');
 fig2 = figure('Name', sprintf('Variable Comparison Across Turbines'));
 for i = 1 : 2
@@ -263,8 +276,8 @@ P_WT14_20 = loadings_F_WT14(:,1:k);
 P_WT39_20 = loadings_F_WT39(:,1:k);
 
 % Checking most different sensors across all 6 components
-diff1_matrix = min(abs(P_WT2(:,1) - P_WT14_20(:,1)), abs(P_WT2(:,1) + P_WT14_20(:,1)));
-diff2_matrix = min(abs(P_WT2(:,1) - P_WT39_20(:,1)), abs(P_WT2(:,1) + P_WT39_20(:,1)));
+diff1_matrix = min(abs(P_WT2 - P_WT14_20), abs(P_WT2 + P_WT14_20));
+diff2_matrix = min(abs(P_WT2 - P_WT39_20), abs(P_WT2 + P_WT39_20));
 
 loading_diff1 = sum(diff1_matrix, 2);
 loading_diff2 = sum(diff2_matrix, 2);
@@ -378,7 +391,7 @@ X_train(:, target_cols) = []; % Prediction matrix X
 Y_train = X_WT2_cal_scaled(:, target_cols); % Target variables Y
 
 % Fit model using the optimal number of latent variables chosen in CV
-[XL, YL, XS, YS, BETA2] = plsregress(X_train, Y_train, best_nLV);
+[XL, YL, XS, YS, BETA2, ~, ~, stats] = plsregress(X_train, Y_train, best_nLV);
 
 % Predict on Calibration data (WT2_cal, 80%)
 Y_train_pred = [ones(size(X_train,1), 1), X_train] * BETA2;
@@ -539,7 +552,21 @@ disp(R2_WT14)
 R2_WT39 = 1 - (MSE_WT39 ./ Var_y_WT39);
 disp('R-squared on WT39:');
 disp(R2_WT39)
+% statistical importance of the weights 
+% VIP
+W_norm = stats.W ./sqrt(sum(stats.W.^2,1));
+sumSq = sum(XS.^2,1) .* sum(YL.^2,1);
+p = size(XL,1);
+vip_scores = sqrt(p * sum(sumSq .*(W_norm.^2),2) ./...
+    sum(sumSq,2));
+[sorted_vip, sorted_ind] = sort(vip_scores,'descend');
+vip_table = [sorted_ind, sorted_vip];
+disp("Ranked VIP scores (Feature_i | VIP score):");
+disp(vip_table);
 
+% correlation matrix
+R_WT2 = corrcoef(X_WT2_scaled);
+disp(R_WT2(1,:));
 %{
 We get good regression performance for the healthy turbine (WT2),
 especially for Sensor 19 (RMSE = 0.5651).
