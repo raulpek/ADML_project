@@ -150,8 +150,8 @@ hmap.FontSize = 12; % Increase font size so that it is easier to see the variabl
 
 title('Correlation Matrix - Healthy WT2');
 
-if ~exist('Figures', 'dir'), mkdir('Figures'); end
-exportgraphics(fig1, 'Figures/WT2_corr_matrix.pdf', 'ContentType', 'vector');
+%if ~exist('Figures', 'dir'), mkdir('Figures'); end
+%exportgraphics(fig1, 'Figures/WT2_corr_matrix.pdf', 'ContentType', 'vector');
 
 % Select 1 and 2 as interesting variables to observe fault behavior
 selected_vars = [19, 21]; %3, 5, 10, 13, 19, 21 seems interesting
@@ -171,7 +171,7 @@ for i = 1 : 2
     grid on;
 end
 
-exportgraphics(fig2, 'Figures/variable_comparisons.pdf', 'ContentType', 'vector');
+% exportgraphics(fig2, 'Figures/variable_comparisons.pdf', 'ContentType', 'vector');
 
 %% Explorative PCA for the healthy turbine
 
@@ -187,7 +187,7 @@ xlabel('Principal Component', 'FontSize',12);
 ylabel('Variance Explained (%)', 'FontSize',12);
 title('Scree Plot - WT2 Healthy Turbine', 'FontSize',14);
 
-exportgraphics(fig3, 'Figures/pca_explained_variance.pdf', 'ContentType', 'vector');
+% exportgraphics(fig3, 'Figures/pca_explained_variance.pdf', 'ContentType', 'vector');
 
 % Normalized PCA biplot with time trajectory
 % Normalize scores to unit variance for equal scaling with loadings
@@ -219,7 +219,7 @@ ylabel('Normalized PC2 Scores', 'FontSize', 12);
 title('Normalized PCA Biplot with Time Trajectory (WT2)', 'FontSize',16);
 grid on;
 
-exportgraphics(fig4, 'Figures/pca_biplot_with_time.pdf', 'ContentType', 'vector');
+% exportgraphics(fig4, 'Figures/pca_biplot_with_time.pdf', 'ContentType', 'vector');
 
 % Project faulty turbines onto healthy WT2 PC axes
 scores_WT14_projected = X_WT14_scaled * loadings_WT2(:, 1:2);
@@ -244,7 +244,7 @@ title('Projection of Faulty Turbines onto Healthy PCA Space');
 legend('Location', 'best');
 grid on;
 
-exportgraphics(fig5, 'Figures/faulty_projected_on_healthy.pdf', 'ContentType', 'vector');
+% exportgraphics(fig5, 'Figures/faulty_projected_on_healthy.pdf', 'ContentType', 'vector');
 
 %% PCA calibration and sensor selection
 
@@ -368,7 +368,7 @@ xticks(lvs);
 grid on;
 legend('Q^2', sprintf('Chosen nLV = %d', best_nLV), 'Location', 'southeast');
 
-exportgraphics(fig6, 'Figures/rmse_and_q2_vs_lvs.pdf', 'ContentType', 'vector');
+% exportgraphics(fig6, 'Figures/rmse_and_q2_vs_lvs.pdf', 'ContentType', 'vector');
 
 %% Final model fit and testing with faulty turbine data
 
@@ -435,7 +435,7 @@ title('Faulty turbine (WT39) - Sensor 1');
 xlabel('Time / Observation-index'); ylabel('Scaled value'); grid on;
 ylim([-50 5])
 
-exportgraphics(fig7, 'Figures/predictions_vs_gt1.pdf', 'ContentType', 'vector');
+% exportgraphics(fig7, 'Figures/predictions_vs_gt1.pdf', 'ContentType', 'vector');
 
 % Graph for sensor 19
 fig8 = figure('Name', 'Sensor 19 predictions across turbines');
@@ -463,7 +463,7 @@ title('Faulty turbine (WT39) - Sensor 19');
 xlabel('Time / Observation-index'); ylabel('Scaled value'); grid on;
 ylim([-10 10])
 
-exportgraphics(fig8, 'Figures/predictions_vs_gt19.pdf', 'ContentType', 'vector');
+% exportgraphics(fig8, 'Figures/predictions_vs_gt19.pdf', 'ContentType', 'vector');
 
 % Residual plot / Control chart
 fig9 = figure('Name', 'Residual Analysis');
@@ -488,7 +488,7 @@ xlabel('Observation-index'); ylabel('Residual');
 legend('Location', 'best'); grid on;
 ylim([-40 50])
 
-exportgraphics(fig9, 'Figures/residuals_sensor1.pdf', 'ContentType', 'vector');
+% exportgraphics(fig9, 'Figures/residuals_sensor1.pdf', 'ContentType', 'vector');
 
 % Residual plot / Control chart
 fig10 = figure('Name', 'Residual Analysis');
@@ -511,7 +511,7 @@ legend('Location', 'best'); grid on;
 ylim([-10 10])
 
 
-exportgraphics(fig10, 'Figures/residuals_sensor19.pdf', 'ContentType', 'vector');
+% exportgraphics(fig10, 'Figures/residuals_sensor19.pdf', 'ContentType', 'vector');
 
 disp('Healthy WT2 Train RMSE (Sensor 1 & Sensor 19):');
 disp(train_RMSE);
@@ -521,6 +521,24 @@ disp(test_RMSE_WT14);
 
 disp('Faulty WT39 Test RMSE (Sensor 1 & Sensor 19):');
 disp(test_RMSE_WT39);
+
+MSE_WT2 = mean((Y_train - Y_train_pred).^2);
+MSE_WT39 = mean((Y_test_WT39 - Y_test_WT39_pred).^2);
+MSE_WT14 = mean((Y_test_WT14 - Y_test_WT14_pred).^2);
+Var_y_WT39 = var(Y_test_WT39,1);
+Var_y_WT14 = var(Y_test_WT14,1);
+Var_y_WT2 = var(Y_train,1);
+
+
+R2_WT2 = 1 - (MSE_WT2 ./ Var_y_WT2);
+disp('R-squared on WT2:');
+disp(R2_WT2)
+R2_WT14 = 1 - (MSE_WT14 ./ Var_y_WT14);
+disp('R-squared on WT14:');
+disp(R2_WT14)
+R2_WT39 = 1 - (MSE_WT39 ./ Var_y_WT39);
+disp('R-squared on WT39:');
+disp(R2_WT39)
 
 %{
 We get good regression performance for the healthy turbine (WT2),
@@ -534,4 +552,3 @@ Conclusion: The PLS model trained on healthy baseline data is unable to
 maintain its regression performance on faulty turbines, demonstrating
 that the learned physical relationship between sensors breaks down during a fault.
 %}
-
