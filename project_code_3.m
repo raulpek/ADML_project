@@ -167,7 +167,8 @@ title('Correlation Matrix - Healthy WT2');
 %exportgraphics(fig1, 'Figures/WT2_corr_matrix.pdf', 'ContentType', 'vector');
 
 % Select 1 and 2 as interesting variables to observe fault behavior
-selected_vars = [3,5]; %3, 5, 10, 13, 19, 21 seems interesting
+selected_vars = [3, 5]; %3, 5, 10, 13, 19, 21 seems interesting
+
 %figure('Name', sprintf('Variable %d Comparison Across Turbines', v), 'Color', 'w');
 fig2 = figure('Name', sprintf('Variable Comparison Across Turbines'));
 for i = 1 : 2
@@ -207,7 +208,7 @@ title('Scree Plot - WT2 Healthy Turbine', 'FontSize',14);
 scores_WT2_norm = scores_WT2(:, 1:2) ./ std(scores_WT2(:, 1:2));
 
 fig4 = figure('Name', 'Normalized PCA Biplot', 'Color', 'w');
-
+subplot(1,2,1)
 % Plot observations with a color gradient representing time progression
 num_obs = size(scores_WT2_norm, 1);
 scatter(scores_WT2_norm(:,1), scores_WT2_norm(:,2), 15, 1:num_obs, 'filled'); 
@@ -227,9 +228,9 @@ quiver(zeros(n_vars, 1), zeros(n_vars, 1), ...
 text(loadings_WT2(:,1)*scaling_factor*1.1, loadings_WT2(:,2)*scaling_factor*1.1, ...
     var_labels, 'Color', 'r', 'FontSize', 8, 'FontWeight', 'bold');
 
-xlabel('Normalized PC1 Scores', 'FontSize', 12);
-ylabel('Normalized PC2 Scores', 'FontSize', 12);
-title('Normalized PCA Biplot with Time Trajectory (WT2)', 'FontSize',16);
+xlabel('Normalized PC1 Scores', 'FontSize', 14);
+ylabel('Normalized PC2 Scores', 'FontSize', 14);
+title('Normalized PCA Biplot with Time Trajectory (WT2)', 'FontSize',14);
 grid on;
 
 % exportgraphics(fig4, 'Figures/pca_biplot_with_time.pdf', 'ContentType', 'vector');
@@ -238,8 +239,9 @@ grid on;
 scores_WT14_projected = X_WT14_scaled * loadings_WT2(:, 1:2);
 scores_WT39_projected = X_WT39_scaled * loadings_WT2(:, 1:2);
 
-fig5 = figure('Name', 'Faulty Turbines Projected on Healthy PC Axes', 'Color', 'w');
-
+%fig5 = figure('Name', 'Faulty Turbines Projected on Healthy PC Axes', 'Color', 'w');
+subplot(1,2,2)
+hold on
 % Plot Healthy Baseline
 plot(scores_WT2(:,1), scores_WT2(:,2), 'go', 'MarkerSize', 8, 'DisplayName', 'WT2 (Healthy Baseline)'); hold on;
 
@@ -251,9 +253,9 @@ plot(scores_WT39_projected(:,1), scores_WT39_projected(:,2), 'm-', 'LineWidth', 
 plot(scores_WT14_projected(1,1), scores_WT14_projected(1,2), 'ro', 'MarkerFaceColor', 'r', 'MarkerSize', 8, 'DisplayName', 'WT14 Start');
 plot(scores_WT39_projected(1,1), scores_WT39_projected(1,2), 'mo', 'MarkerFaceColor', 'm', 'MarkerSize', 8, 'DisplayName', 'WT39 Start');
 
-xlabel('PC1 (Healthy Space)');
-ylabel('PC2 (Healthy Space)');
-title('Projection of Faulty Turbines onto Healthy PCA Space');
+xlabel('PC1 (Healthy Space)', 'FontSize',14);
+ylabel('PC2 (Healthy Space)', 'FontSize',14);
+title('Projection of Faulty Turbines onto Healthy PCA Space','FontSize',14);
 legend('Location', 'best');
 grid on;
 
