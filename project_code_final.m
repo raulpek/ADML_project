@@ -287,7 +287,7 @@ loading_diff2 = sum(diff2_matrix, 2);
 % Take two most different sensors as the target variables Y
 [~, sorted_sensors] = sort(loading_diff1 + loading_diff2,...
     'descend');
-target_cols = sorted_sensors(1:2); % Most different sensors: 1 & 19
+target_cols = sorted_sensors(1:2); % Most different sensors: 27 & 1
 
 %% PLS modeling and  cross-validation
 
@@ -426,47 +426,47 @@ test_RMSE_WT39 = sqrt(mean((res_WT39).^2, 1));
 %% Prediction and control chart visualizations
 % Plot of predictions vs actual values
 % Graph for sensor 1
-fig7 = figure('Name', 'Sensor 1 predictions across turbines');
+fig7 = figure('Name', 'Sensor 27 predictions across turbines');
 
 % Healthy turbine (WT2)
 subplot(3,1,1);
 plot(Y_train(:,1), 'k', 'LineWidth', 1); hold on;
 plot(Y_train_pred(:,1), 'r--', 'LineWidth', 1);
-title('Healthy turbine (WT2) - Sensor 1');
+title('Healthy turbine (WT2) - Sensor 27');
 ylabel('Scaled value'); legend('Truth', 'Prediction'); grid on;
 
 % Faulty turbine (WT14)
 subplot(3,1,2);
 plot(Y_test_WT14(:,1), 'k', 'LineWidth', 1); hold on;
 plot(Y_test_WT14_pred(:,1), 'r--', 'LineWidth', 1);
-title('Faulty turbine (WT14) - Sensor 1');
+title('Faulty turbine (WT14) - Sensor 27');
 ylabel('Scaled value'); grid on;
 
 % Faulty turbine 2 (WT39)
 subplot(3,1,3);
 plot(Y_test_WT39(:,1), 'k', 'LineWidth', 1); hold on;
 plot(Y_test_WT39_pred(:,1), 'r--', 'LineWidth', 1);
-title('Faulty turbine (WT39) - Sensor 1');
+title('Faulty turbine (WT39) - Sensor 27');
 xlabel('Time / Observation-index'); ylabel('Scaled value'); grid on;
 ylim([-50 5])
 
-% exportgraphics(fig7, 'Figures/predictions_vs_gt1.pdf', 'ContentType', 'vector');
+% exportgraphics(fig7, 'Figures/predictions_vs_gt27.pdf', 'ContentType', 'vector');
 
-% Graph for sensor 19
-fig8 = figure('Name', 'Sensor 19 predictions across turbines');
+% Graph for sensor 1
+fig8 = figure('Name', 'Sensor 1 predictions across turbines');
 
 % Healthy turbine (WT2)
 subplot(3,1,1);
 plot(Y_train(:,2), 'k', 'LineWidth', 1); hold on;
 plot(Y_train_pred(:,2), 'r--', 'LineWidth', 1);
-title('Healthy turbine (WT2) - Sensor 19');
+title('Healthy turbine (WT2) - Sensor 1');
 ylabel('Scaled value'); legend('Truth', 'Prediction'); grid on;
 
 % Faulty turbine (WT14)
 subplot(3,1,2);
 plot(Y_test_WT14(:,2), 'k', 'LineWidth', 1); hold on;
 plot(Y_test_WT14_pred(:,2), 'r--', 'LineWidth', 1);
-title('Faulty turbine (WT14) - Sensor 19');
+title('Faulty turbine (WT14) - Sensor 1');
 ylabel('Scaled value'); grid on;
 ylim([-10 10])
 
@@ -474,11 +474,11 @@ ylim([-10 10])
 subplot(3,1,3);
 plot(Y_test_WT39(:,2), 'k', 'LineWidth', 1); hold on;
 plot(Y_test_WT39_pred(:,2), 'r--', 'LineWidth', 1);
-title('Faulty turbine (WT39) - Sensor 19');
+title('Faulty turbine (WT39) - Sensor 1');
 xlabel('Time / Observation-index'); ylabel('Scaled value'); grid on;
 ylim([-10 10])
 
-% exportgraphics(fig8, 'Figures/predictions_vs_gt19.pdf', 'ContentType', 'vector');
+% exportgraphics(fig8, 'Figures/predictions_vs_gt1.pdf', 'ContentType', 'vector');
 
 % Residual plot / Control chart
 fig9 = figure('Name', 'Residual Analysis');
@@ -498,12 +498,12 @@ plot(res_WT39(:,1), 'm', 'DisplayName', 'WT39 (Faulty)');
 yline(threshold_s1, 'r--', '3\sigma limits', 'LineWidth', 1.5, 'DisplayName','UCL');
 yline(-threshold_s1, 'b--', 'LineWidth', 1.5, 'DisplayName','LCL');
 
-title('Residuals (Sensor 1) and fault detection threshold');
+title('Residuals (Sensor 27) and fault detection threshold');
 xlabel('Observation-index'); ylabel('Residual');
 legend('Location', 'best'); grid on;
 ylim([-40 50])
 
-% exportgraphics(fig9, 'Figures/residuals_sensor1.pdf', 'ContentType', 'vector');
+% exportgraphics(fig9, 'Figures/residuals_sensor27.pdf', 'ContentType', 'vector');
 
 % Residual plot / Control chart
 fig10 = figure('Name', 'Residual Analysis');
@@ -520,7 +520,7 @@ plot(res_WT39(:,2), 'm', 'DisplayName', 'WT39 (Faulty)');
 yline(threshold_s1, 'r--', '3\sigma limits', 'LineWidth', 1.5, 'DisplayName','UCL');
 yline(-threshold_s1, 'b--', 'LineWidth', 1.5, 'DisplayName','LCL');
 
-title('Residuals (Sensor 19) and fault detection threshold');
+title('Residuals (Sensor 1) and fault detection threshold');
 xlabel('Observation-index'); ylabel('Residual');
 legend('Location', 'best'); grid on;
 ylim([-10 10])
@@ -528,13 +528,13 @@ ylim([-10 10])
 
 % exportgraphics(fig10, 'Figures/residuals_sensor19.pdf', 'ContentType', 'vector');
 
-disp('Healthy WT2 Train RMSE (Sensor 1 & Sensor 19):');
+disp('Healthy WT2 Train RMSE (Sensor 27 & Sensor 1):');
 disp(train_RMSE);
 
-disp('Faulty WT14 Test RMSE (Sensor 1 & Sensor 19):');
+disp('Faulty WT14 Test RMSE (Sensor 27 & Sensor 1):');
 disp(test_RMSE_WT14);
 
-disp('Faulty WT39 Test RMSE (Sensor 1 & Sensor 19):');
+disp('Faulty WT39 Test RMSE (Sensor 27 & Sensor 1):');
 disp(test_RMSE_WT39);
 
 MSE_WT2 = mean((Y_train - Y_train_pred).^2);
@@ -571,11 +571,18 @@ R_WT2 = corrcoef(X_WT2_scaled);
 disp(R_WT2(1,:));
 %{
 We get good regression performance for the healthy turbine (WT2),
-especially for Sensor 19 (RMSE = 0.5651).
+especially for Sensor 27 (RMSE = 0.1887).
 
 On the faulty turbines, the regression performance degrades
-significantly. For Sensor 19, the RMSE increases from 0.5651 to 1244.6 on WT14
-and to 1401.3 on WT39.
+significantly. For Sensor 27, the RMSE is over 2000 times larger on WT14 and
+over 3000 times larger on WT39. For sensor 1 the RMSEs are also much larger
+in the faulty turbines, but both are under 100 times larger.
+
+For WT2 coefficient of determination is high for sensor 27 at 96,44% and low for
+sensor 1 (19,13%). For sensor 27 the R^2s of faulty turbines are in negative
+10^5 scale, which means that the sum of the squared errors the model produces
+is over 10^5 times larger than that of a simple average. For sensor 1 the
+sum of the squared errors are 10^3 times larger.
 
 Conclusion: The PLS model trained on healthy baseline data is unable to
 maintain its regression performance on faulty turbines, demonstrating
